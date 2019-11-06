@@ -14,4 +14,15 @@ const CLIENT_URL =
     ? localClientDomain
     : cloudClientDomain;
 
-module.exports = { CLIENT_URL, SERVER_URL };
+const randomStringGenerator = () => {
+  return (
+    Math.random()
+      .toString(36)
+      .substring(2, 15) +
+    Math.random()
+      .toString(36)
+      .substring(2, 15)
+  );
+};
+
+module.exports = { CLIENT_URL, SERVER_URL, randomStringGenerator };
