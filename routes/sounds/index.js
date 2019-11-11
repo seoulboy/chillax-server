@@ -68,14 +68,14 @@ const handleGetSound = async (req, res, next) => {
       return b.likedBy.length - a.likedBy.length;
     });
     popularSounds = popularSounds.slice(0, limit);
-    
+
     popularSounds = await Promise.all(
       popularSounds.map(async sound => {
         const user = await User.findById(sound.uploader);
         sound._doc.uploader = user;
-        return sound
+        return sound;
       })
-    )
+    );
 
     result.most_popular = popularSounds;
   } else {
@@ -116,15 +116,10 @@ const handlePostSound = async (req, res, next) => {
   const { user_id } = req.params;
   try {
     if (mongoose.Types.ObjectId.isValid(user_id)) {
-      console.log(
-        `TITLE: ${title}, TYPE: ${type}, SOUND: ${sound}, IMAGE: ${image}, DEFAULTIMAGE: ${defaultImage}`
-      );
-
       if (title && type && sound && image) {
         const url = [
           { soundUrl: sound[0].location, thumbnailUrl: image[0].location },
         ];
-        console.log(url);
         const newSound = await new Sound({
           title,
           type,
@@ -132,8 +127,6 @@ const handlePostSound = async (req, res, next) => {
           description,
           uploader: user_id,
         }).save();
-
-        console.log(newSound);
 
         res.status(200).json(newSound);
       } else if ((title, type, sound, defaultImage)) {
