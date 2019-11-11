@@ -48,7 +48,7 @@ const handlePutLikedSounds = async (req, res, next) => {
       const likedSound = await Sound.findById(likedSoundId);
       likedSound.likedBy.push(_id);
       likedSound.save();
-      
+
       const user = await User.findById(_id);
       user.likedSounds.unshift(likedSoundId);
 
@@ -83,9 +83,43 @@ const handleGetLikedSounds = async (req, res, next) => {
           sound._doc.uploader = user;
           return sound;
         })
-      )
+      );
 
       res.status(200).json({ likedSounds });
+    }
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+const handleDeleteLikedSounds = async (req, res, next) => {
+  const { user_id } = req.params;
+  // const { _id } = req.user;
+  const { sound_id: soundIdToDelete } = req.params;
+  try {
+    if (
+      mongoose.Types.ObjectId.isValid(user_id) &&
+      mongoose.Types.ObjectId.isValid(soundIdToDelete)
+    ) {
+      const user = await User.findById(user_id);
+      const filteredLikedList = user.likedSounds.filter(soundIds => {
+        return soundIds != soundIdToDelete;
+      });
+      user.likedSounds = filteredLikedList;
+
+      await user.save();
+
+      const sound = await Sound.findById(soundIdToDelete);
+      const filteredLikedSoundLikedUserList = sound.likedBy.filter(
+        userId => userId != user_id
+      );
+
+      sound.likedBy = filteredLikedSoundLikedUserList;
+      await sound.save();
+
+      res.status(200).json('unlike successful');
+    } else {
+      throw Error('validation failed: check user_id or soundIdToDelete');
     }
   } catch (error) {
     console.error(error);
@@ -113,7 +147,7 @@ const handleGetListeningHistory = async (req, res, next) => {
           sound._doc.uploader = user;
           return sound;
         })
-      )
+      );
 
       res.status(200).json({ listeningHistory });
     }
@@ -127,5 +161,7 @@ router.get('/:user_id/liked_sounds', handleGetLikedSounds);
 
 router.put('/:user_id/listening_history', handlePutListeningHistory);
 router.put('/:user_id/liked_sounds', handlePutLikedSounds);
+
+router.delete('/:user_id/liked_sounds/:sound_id', handleDeleteLikedSounds);
 
 module.exports = router;
