@@ -19,6 +19,7 @@ const uploadSound = multer({
     key: async (req, file, cb) => {
       // todo: add sound;
       // directory:
+      console.log(file);
       if (file.fieldname === 'sound') {
         cb(
           null,

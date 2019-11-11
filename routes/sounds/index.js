@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
 const mongoose = require('mongoose');
+const moment = require('moment');
 const { User, Sound } = require('../../models');
 const uploadSound = require('../../services/uploadSound');
 const uploadThumbnail = require('../../services/uploadThumbnail');
 
 // TODO: get sound: ADD LOGIC DEPENDING ON TYPE WHEN using mongoose.find() because
-// sounds can be either white noise (one sound) or soundscapes (multiple sounds)
+// sounds can be either white noise (one sound) or soundscapes (multiple sounds) ()
 const handleGetSound = async (req, res, next) => {
   const { user_id } = req.params;
   const {
@@ -14,13 +15,14 @@ const handleGetSound = async (req, res, next) => {
     liked,
     recommendation,
     history,
-    trending,
-    recently_uploaded,
+    most_popular,
+    recent_upload,
   } = req.query;
 
-  console.log(`USER_ID: ${user_id}`);
+  const limit = '7';
+
   console.log(
-    `TYPE: ${type}, LIKED: ${liked}, RECOMMENDATION: ${recommendation}, HISTORY: ${history}`
+    `USER_ID: ${user_id}, TYPE: ${type}, LIKED: ${liked}, RECOMMENDATION: ${recommendation}, HISTORY: ${history}, RECENT_UPLOAD: ${recent_upload}, MOST_POPULAR: ${most_popular}`
   );
 
   const result = {};
@@ -29,7 +31,7 @@ const handleGetSound = async (req, res, next) => {
     if (mongoose.Types.ObjectId.isValid(user_id));
     const user = await User.findById(user_id);
 
-    if (liked) {
+    if (liked === true) {
       result.liked = await Promise.all(
         user.likedSounds.map(async sound => {
           return await Sound.findById(sound._id);
@@ -39,7 +41,7 @@ const handleGetSound = async (req, res, next) => {
       result.liked = null;
     }
 
-    if (history) {
+    if (history === true) {
       result.history = await Promise.all(
         user.recentlyListened.map(async sound => {
           return await Sound.findById(sound._id);
@@ -49,7 +51,7 @@ const handleGetSound = async (req, res, next) => {
       result.history = null;
     }
 
-    if (recommendation) {
+    if (recommendation === 'true') {
       // recommendation logic needed: based on the users likes & sound tags.
       result.recommendation = 'no recommendation';
     } else {
@@ -57,17 +59,50 @@ const handleGetSound = async (req, res, next) => {
     }
   }
 
-  if (trending) {
-    const trendingSounds = await Sound.find({});
-    // This can be either all sounds, white noises or soundscapes
-    // based on how many have listened over last week.
+  // most_popular logic needed: based on number of likes..
+  // NEED TO KNOW IF SOUND SCAPE OR WHITE NOISE OR BOTH.
+  if (most_popular === 'true') {
+    var popularSounds = await Sound.find({});
+    // TODO: NEED TO SORT AND LIMIT THE NUMBERS
+    popularSounds.sort((a, b) => {
+      return b.likedBy.length - a.likedBy.length;
+    });
+    popularSounds = popularSounds.slice(0, limit);
+    
+    popularSounds = await Promise.all(
+      popularSounds.map(async sound => {
+        const user = await User.findById(sound.uploader);
+        sound._doc.uploader = user;
+        return sound
+      })
+    )
+
+    result.most_popular = popularSounds;
   } else {
-    result.trending = null;
+    result.most_popular = null;
   }
-  if (recently_uploaded) {
-    // based on upload date
+
+  if (recent_upload === 'true') {
+    var recentlyUploadedSounds = await Sound.find({});
+    recentlyUploadedSounds.sort((a, b) => {
+      return (
+        Number(moment(b.uploadDate).format('x')) -
+        Number(moment(a.uploadDate).format('x'))
+      );
+    });
+
+    recentlyUploadedSounds = recentlyUploadedSounds.slice(0, limit);
+
+    const recentlyUploadedSoundsNew = await Promise.all(
+      recentlyUploadedSounds.map(async sound => {
+        const user = await User.findById(sound.uploader);
+        sound._doc.uploader = user;
+        return sound;
+      })
+    );
+    result.recent_upload = recentlyUploadedSoundsNew;
   } else {
-    result.recently_uploaded = null;
+    result.recent_upload = null;
   }
   res.json({ ...result });
 };
@@ -76,11 +111,15 @@ const handlePostSound = async (req, res, next) => {
   console.log('handlePostSound req files', req.files);
   console.log('handlePostSound req body', req.body);
 
-  const { title, type, description } = req.body;
+  const { title, type, description, defaultImage } = req.body;
   const { sound, image } = req.files;
   const { user_id } = req.params;
   try {
     if (mongoose.Types.ObjectId.isValid(user_id)) {
+      console.log(
+        `TITLE: ${title}, TYPE: ${type}, SOUND: ${sound}, IMAGE: ${image}, DEFAULTIMAGE: ${defaultImage}`
+      );
+
       if (title && type && sound && image) {
         const url = [
           { soundUrl: sound[0].location, thumbnailUrl: image[0].location },
@@ -97,8 +136,24 @@ const handlePostSound = async (req, res, next) => {
         console.log(newSound);
 
         res.status(200).json(newSound);
+      } else if ((title, type, sound, defaultImage)) {
+        const url = [
+          { soundUrl: sound[0].location, thumbnailUrl: defaultImage },
+        ];
+        console.log(url);
+        const newSound = await new Sound({
+          title,
+          type,
+          url,
+          description,
+          uploader: user_id,
+        }).save();
+
+        console.log(newSound);
+
+        res.status(200).json(newSound);
       } else {
-        throw Error('title or type or url not found');
+        throw Error('validation failed: check inputs');
       }
     } else {
       res.status(400).send({ error: 'invalid user id' });
