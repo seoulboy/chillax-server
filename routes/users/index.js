@@ -6,36 +6,6 @@ const { User, Sound } = require('../../models');
 
 router.use('/:user_id/sounds', soundsRouter);
 
-const handlePutListeningHistory = async (req, res, next) => {
-  const { soundId: playedSoundId } = req.body;
-  const { _id } = req.user;
-
-  try {
-    if (
-      mongoose.Types.ObjectId.isValid(_id) &&
-      mongoose.Types.ObjectId.isValid(playedSoundId)
-    ) {
-      const sound = await Sound.findById(playedSoundId);
-      sound.times_played++;
-      sound.save();
-
-      const user = await User.findById(_id);
-      var updatedListeningHistory = user.recentlyListened.filter(
-        soundId => soundId != playedSoundId
-      );
-
-      updatedListeningHistory = [playedSoundId].concat(updatedListeningHistory);
-      user.recentlyListened = updatedListeningHistory;
-
-      user.save();
-
-      res.status(200).json(user.recentlyListened);
-    }
-  } catch (error) {
-    console.error(error);
-  }
-};
-
 const handlePutLikedSounds = async (req, res, next) => {
   const { soundId: likedSoundId } = req.body;
   const { _id } = req.user;
@@ -150,6 +120,36 @@ const handleGetListeningHistory = async (req, res, next) => {
       );
 
       res.status(200).json({ listeningHistory });
+    }
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+const handlePutListeningHistory = async (req, res, next) => {
+  const { soundId: playedSoundId } = req.body;
+  const { _id } = req.user;
+
+  try {
+    if (
+      mongoose.Types.ObjectId.isValid(_id) &&
+      mongoose.Types.ObjectId.isValid(playedSoundId)
+    ) {
+      const sound = await Sound.findById(playedSoundId);
+      sound.times_played++;
+      sound.save();
+
+      const user = await User.findById(_id);
+      var updatedListeningHistory = user.recentlyListened.filter(
+        soundId => soundId != playedSoundId
+      );
+
+      updatedListeningHistory = [playedSoundId].concat(updatedListeningHistory);
+      user.recentlyListened = updatedListeningHistory;
+
+      user.save();
+
+      res.status(200).json(user.recentlyListened);
     }
   } catch (error) {
     console.error(error);

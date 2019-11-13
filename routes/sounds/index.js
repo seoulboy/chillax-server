@@ -6,60 +6,51 @@ const { User, Sound } = require('../../models');
 const uploadSound = require('../../services/uploadSound');
 const uploadThumbnail = require('../../services/uploadThumbnail');
 
+const shuffle = array => {
+  var currentIndex = array.length,
+    temporaryValue,
+    randomIndex;
+
+  // While there remain elements to shuffle...
+  while (0 !== currentIndex) {
+    // Pick a remaining element...
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex -= 1;
+
+    // And swap it with the current element.
+    temporaryValue = array[currentIndex];
+    array[currentIndex] = array[randomIndex];
+    array[randomIndex] = temporaryValue;
+  }
+
+  return array;
+};
+
 // TODO: get sound: ADD LOGIC DEPENDING ON TYPE WHEN using mongoose.find() because
 // sounds can be either white noise (one sound) or soundscapes (multiple sounds) ()
 const handleGetSound = async (req, res, next) => {
   const { user_id } = req.params;
   const {
     type,
-    liked,
-    recommendation,
-    history,
     most_popular,
     recent_upload,
+    most_listened,
+    discover_sounds,
   } = req.query;
 
   const limit = '7';
 
   console.log(
-    `USER_ID: ${user_id}, TYPE: ${type}, LIKED: ${liked}, RECOMMENDATION: ${recommendation}, HISTORY: ${history}, RECENT_UPLOAD: ${recent_upload}, MOST_POPULAR: ${most_popular}`
+    `USER_ID: ${user_id}, 
+    TYPE: ${type}, 
+    MOST_LISTENED: ${most_listened}, 
+    DISCOVER_SOUNDS: ${discover_sounds},  
+    RECENT_UPLOAD: ${recent_upload}, 
+    MOST_POPULAR: ${most_popular}`
   );
 
   const result = {};
-  if (user_id) {
-    // data depending on user : liked sounds, listening history, recommendation
-    if (mongoose.Types.ObjectId.isValid(user_id));
-    const user = await User.findById(user_id);
 
-    if (liked === true) {
-      result.liked = await Promise.all(
-        user.likedSounds.map(async sound => {
-          return await Sound.findById(sound._id);
-        })
-      );
-    } else {
-      result.liked = null;
-    }
-
-    if (history === true) {
-      result.history = await Promise.all(
-        user.recentlyListened.map(async sound => {
-          return await Sound.findById(sound._id);
-        })
-      );
-    } else {
-      result.history = null;
-    }
-
-    if (recommendation === 'true') {
-      // recommendation logic needed: based on the users likes & sound tags.
-      result.recommendation = 'no recommendation';
-    } else {
-      result.recommendation = null;
-    }
-  }
-
-  // most_popular logic needed: based on number of likes..
   // NEED TO KNOW IF SOUND SCAPE OR WHITE NOISE OR BOTH.
   if (most_popular === 'true') {
     var popularSounds = await Sound.find({});
@@ -100,9 +91,47 @@ const handleGetSound = async (req, res, next) => {
         return sound;
       })
     );
+
     result.recent_upload = recentlyUploadedSoundsNew;
   } else {
     result.recent_upload = null;
+  }
+
+  if (most_listened === 'true') {
+    var mostListenedSounds = await Sound.find({});
+    mostListenedSounds.sort((a, b) => {
+      return Number(b.times_played) - Number(a.times_played);
+    });
+
+    mostListenedSounds = mostListenedSounds.slice(0, limit);
+
+    mostListenedSounds = await Promise.all(
+      mostListenedSounds.map(async sound => {
+        const user = await User.findById(sound.uploader);
+        sound._doc.uploader = user;
+        return sound;
+      })
+    );
+
+    result.most_listened = mostListenedSounds;
+  } else {
+    result.most_listened = null;
+  }
+
+  if (discover_sounds === 'true') {
+    var discoverSounds = await Sound.find({});
+    discoverSounds = shuffle(discoverSounds).slice(0, limit);
+    discoverSounds = await Promise.all(
+      discoverSounds.map(async sound => {
+        const user = await User.findById(sound.uploader);
+        sound._doc.uploader = user;
+        return sound;
+      })
+    );
+
+    result.discover_sounds = discoverSounds;
+  } else {
+    result.discover_sounds = null;
   }
   res.json({ ...result });
 };
