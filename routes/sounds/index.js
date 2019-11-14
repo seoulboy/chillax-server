@@ -36,6 +36,8 @@ const handleGetSound = async (req, res, next) => {
     recent_upload,
     most_listened,
     discover_sounds,
+    load_item,
+    current_index,
   } = req.query;
 
   const limit = '7';
@@ -46,100 +48,171 @@ const handleGetSound = async (req, res, next) => {
     MOST_LISTENED: ${most_listened}, 
     DISCOVER_SOUNDS: ${discover_sounds},  
     RECENT_UPLOAD: ${recent_upload}, 
-    MOST_POPULAR: ${most_popular}`
+    MOST_POPULAR: ${most_popular},
+    CURRENT_INDEX: ${current_index},
+    `
   );
 
   const result = {};
 
-  // NEED TO KNOW IF SOUND SCAPE OR WHITE NOISE OR BOTH.
-  if (most_popular === 'true') {
-    var popularSounds = await Sound.find({});
-    // TODO: NEED TO SORT AND LIMIT THE NUMBERS
-    popularSounds.sort((a, b) => {
-      return b.likedBy.length - a.likedBy.length;
-    });
-    popularSounds = popularSounds.slice(0, limit);
+  if (load_item && current_index) {
+    const currentIndex = Number(current_index);
 
-    popularSounds = await Promise.all(
-      popularSounds.map(async sound => {
-        const user = await User.findById(sound.uploader);
-        sound._doc.uploader = user;
-        return sound;
-      })
-    );
-
-    result.most_popular = popularSounds;
-  } else {
-    result.most_popular = null;
-  }
-
-  if (recent_upload === 'true') {
-    var recentlyUploadedSounds = await Sound.find({});
-    recentlyUploadedSounds.sort((a, b) => {
-      return (
-        Number(moment(b.uploadDate).format('x')) -
-        Number(moment(a.uploadDate).format('x'))
+    if (load_item === 'most_popular') {
+      var popularSounds = await Sound.find({});
+      popularSounds.sort((a, b) => {
+        return b.likedBy.length - a.likedBy.length;
+      });
+      popularSounds = popularSounds.slice(
+        currentIndex,
+        currentIndex + Number(limit)
       );
-    });
 
-    recentlyUploadedSounds = recentlyUploadedSounds.slice(0, limit);
+      popularSounds = await Promise.all(
+        popularSounds.map(async sound => {
+          const user = await User.findById(sound.uploader);
+          sound._doc.uploader = user;
+          return sound;
+        })
+      );
 
-    const recentlyUploadedSoundsNew = await Promise.all(
-      recentlyUploadedSounds.map(async sound => {
-        const user = await User.findById(sound.uploader);
-        sound._doc.uploader = user;
-        return sound;
-      })
-    );
+      result.most_popular = popularSounds;
+    }
 
-    result.recent_upload = recentlyUploadedSoundsNew;
+    if (load_item === 'recent_uploads') {
+      var recentlyUploadedSounds = await Sound.find({});
+      recentlyUploadedSounds.sort((a, b) => {
+        return (
+          Number(moment(b.uploadDate).format('x')) -
+          Number(moment(a.uploadDate).format('x'))
+        );
+      });
+
+      recentlyUploadedSounds = recentlyUploadedSounds.slice(
+        currentIndex,
+        currentIndex + Number(limit)
+      );
+
+      const recentlyUploadedSoundsNew = await Promise.all(
+        recentlyUploadedSounds.map(async sound => {
+          const user = await User.findById(sound.uploader);
+          sound._doc.uploader = user;
+          return sound;
+        })
+      );
+
+      result.recent_upload = recentlyUploadedSoundsNew;
+    }
+
+    if (load_item === 'most_listened') {
+      var mostListenedSounds = await Sound.find({});
+      mostListenedSounds.sort((a, b) => {
+        return Number(b.times_played) - Number(a.times_played);
+      });
+
+      mostListenedSounds = mostListenedSounds.slice(
+        currentIndex,
+        currentIndex + Number(limit)
+      );
+
+      mostListenedSounds = await Promise.all(
+        mostListenedSounds.map(async sound => {
+          const user = await User.findById(sound.uploader);
+          sound._doc.uploader = user;
+          return sound;
+        })
+      );
+
+      result.most_listened = mostListenedSounds;
+    }
   } else {
-    result.recent_upload = null;
-  }
+    // NEED TO KNOW IF SOUND SCAPE OR WHITE NOISE OR BOTH.
+    if (most_popular === 'true') {
+      var popularSounds = await Sound.find({});
+      // TODO: NEED TO SORT AND LIMIT THE NUMBERS
+      popularSounds.sort((a, b) => {
+        return b.likedBy.length - a.likedBy.length;
+      });
+      popularSounds = popularSounds.slice(0, limit);
 
-  if (most_listened === 'true') {
-    var mostListenedSounds = await Sound.find({});
-    mostListenedSounds.sort((a, b) => {
-      return Number(b.times_played) - Number(a.times_played);
-    });
+      popularSounds = await Promise.all(
+        popularSounds.map(async sound => {
+          const user = await User.findById(sound.uploader);
+          sound._doc.uploader = user;
+          return sound;
+        })
+      );
 
-    mostListenedSounds = mostListenedSounds.slice(0, limit);
+      result.most_popular = popularSounds;
+    } else {
+      result.most_popular = null;
+    }
 
-    mostListenedSounds = await Promise.all(
-      mostListenedSounds.map(async sound => {
-        const user = await User.findById(sound.uploader);
-        sound._doc.uploader = user;
-        return sound;
-      })
-    );
+    if (recent_upload === 'true') {
+      var recentlyUploadedSounds = await Sound.find({});
+      recentlyUploadedSounds.sort((a, b) => {
+        return (
+          Number(moment(b.uploadDate).format('x')) -
+          Number(moment(a.uploadDate).format('x'))
+        );
+      });
 
-    result.most_listened = mostListenedSounds;
-  } else {
-    result.most_listened = null;
-  }
+      recentlyUploadedSounds = recentlyUploadedSounds.slice(0, limit);
 
-  if (discover_sounds === 'true') {
-    var discoverSounds = await Sound.find({});
-    discoverSounds = shuffle(discoverSounds).slice(0, limit);
-    discoverSounds = await Promise.all(
-      discoverSounds.map(async sound => {
-        const user = await User.findById(sound.uploader);
-        sound._doc.uploader = user;
-        return sound;
-      })
-    );
+      const recentlyUploadedSoundsNew = await Promise.all(
+        recentlyUploadedSounds.map(async sound => {
+          const user = await User.findById(sound.uploader);
+          sound._doc.uploader = user;
+          return sound;
+        })
+      );
 
-    result.discover_sounds = discoverSounds;
-  } else {
-    result.discover_sounds = null;
+      result.recent_upload = recentlyUploadedSoundsNew;
+    } else {
+      result.recent_upload = null;
+    }
+
+    if (most_listened === 'true') {
+      var mostListenedSounds = await Sound.find({});
+      mostListenedSounds.sort((a, b) => {
+        return Number(b.times_played) - Number(a.times_played);
+      });
+
+      mostListenedSounds = mostListenedSounds.slice(0, limit);
+
+      mostListenedSounds = await Promise.all(
+        mostListenedSounds.map(async sound => {
+          const user = await User.findById(sound.uploader);
+          sound._doc.uploader = user;
+          return sound;
+        })
+      );
+
+      result.most_listened = mostListenedSounds;
+    } else {
+      result.most_listened = null;
+    }
+
+    if (discover_sounds === 'true') {
+      var discoverSounds = await Sound.find({});
+      discoverSounds = shuffle(discoverSounds);
+      discoverSounds = await Promise.all(
+        discoverSounds.map(async sound => {
+          const user = await User.findById(sound.uploader);
+          sound._doc.uploader = user;
+          return sound;
+        })
+      );
+
+      result.discover_sounds = discoverSounds;
+    } else {
+      result.discover_sounds = null;
+    }
   }
   res.json({ ...result });
 };
 
 const handlePostSound = async (req, res, next) => {
-  console.log('handlePostSound req files', req.files);
-  console.log('handlePostSound req body', req.body);
-
   const { title, type, description, defaultImage } = req.body;
   const { sound, image } = req.files;
   const { user_id } = req.params;
@@ -162,7 +235,6 @@ const handlePostSound = async (req, res, next) => {
         const url = [
           { soundUrl: sound[0].location, thumbnailUrl: defaultImage },
         ];
-        console.log(url);
         const newSound = await new Sound({
           title,
           type,
@@ -170,8 +242,6 @@ const handlePostSound = async (req, res, next) => {
           description,
           uploader: user_id,
         }).save();
-
-        console.log(newSound);
 
         res.status(200).json(newSound);
       } else {

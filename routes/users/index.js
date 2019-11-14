@@ -110,7 +110,6 @@ const handleGetListeningHistory = async (req, res, next) => {
           return await Sound.findById(soundId);
         })
       );
-
       listeningHistory = await Promise.all(
         listeningHistory.map(async sound => {
           const user = await User.findById(sound.uploader);
