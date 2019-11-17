@@ -34,9 +34,9 @@ jobs:
           name: Deploy to env
           command: |
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
-                eb deploy sample
+                eb deploy chillax
             else
-                eb deploy sample-development
+                eb deploy chillax-development
             fi
 workflows:
   version: 2
