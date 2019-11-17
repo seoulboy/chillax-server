@@ -3,7 +3,7 @@ jobs:
   build:
     docker:
       - image: circleci/python:3.7.0-stretch-node-browsers
-    working_directory: ~/chillax
+    working_directory: ~/sample
     steps:
       - checkout
       - run:
@@ -34,9 +34,9 @@ jobs:
           name: Deploy to env
           command: |
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
-                eb deploy chillax
+                eb deploy Chillax-env
             else
-                eb deploy chillax-development
+                eb deploy Chillax-development
             fi
 workflows:
   version: 2
