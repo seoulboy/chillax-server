@@ -32,7 +32,6 @@ passport.use(
           },
           (error, user) => {
             if (error) throw error;
-            console.log('found or created a user: ', user);
             done(null, user);
           }
         );
