@@ -2,7 +2,7 @@ const localClientDomain = `http://localhost:3000`;
 const cloudClientDomain = 'https://chillax.imho.space';
 
 const localServerDomain = `http://localhost:4000`;
-const cloudServerDomain = 'https://chillax.imho.space';
+const cloudServerDomain = 'https://api.imho.space';
 
 const SERVER_URL =
   process.env.NODE_ENV === 'development'
