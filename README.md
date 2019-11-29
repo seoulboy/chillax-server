@@ -56,7 +56,7 @@ npm install
 npm start
 ```
 
-chillax-server의 root 폴더 안에 '.dotenv' 파일명으로 작성한 파일 안에 아래의 ** **안 작성이 선행되어야 서버가 정상적으로 작동합니다.
+chillax-server의 root 디렉토리 안에 '.dotenv' 파일명으로 작성한 파일 안에 아래의 ** **안 작성이 선행되어야 서버가 정상적으로 작동합니다.
 
 ```
 DB_USER=**MongoDB userID**
