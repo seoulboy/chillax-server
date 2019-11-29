@@ -4,7 +4,6 @@ const mongoose = require('mongoose');
 const moment = require('moment');
 const { User, Sound } = require('../../models');
 const uploadSound = require('../../services/uploadSound');
-const uploadThumbnail = require('../../services/uploadThumbnail');
 
 const shuffle = array => {
   var currentIndex = array.length,
